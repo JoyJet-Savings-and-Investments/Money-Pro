@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="City-Money Pro v20 — Personal investment & goal tracking dashboard" />
+  <title>City-Money Pro</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="offlineBanner" class="offline-banner" role="alert">You are offline. Showing cached / fallback prices.</div>
+
+  <nav class="top-nav" id="topNav" aria-label="Main navigation">
+    <a href="#" class="nav-brand" data-section="dashboard"><span class="icon">⬡</span> City-Money Pro</a>
+    <div class="nav-right">
+      <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">☀️</button>
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">☰</button>
+      <div class="nav-links" id="navLinks">
+        <a href="#" data-section="dashboard" class="active">Dashboard</a>
+        <a href="#" data-section="invest">Invest</a>
+        <a href="#" data-section="goals">Goals</a>
+        <a href="#" data-section="alerts">Alerts</a>
+        <a href="#" data-section="history">History</a>
+        <button id="logoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="app" id="app" aria-hidden="true">
+    <section id="dashboard" class="section active" aria-labelledby="dash-title">
+      <div class="portfolio-bar">
+        <label for="portfolioSelect">Portfolio</label>
+        <select id="portfolioSelect" aria-label="Select portfolio"></select>
+        <button class="btn btn-ghost" id="newPortfolioBtn" type="button">+ New</button>
+        <button class="btn btn-ghost" id="renamePortfolioBtn" type="button">Rename</button>
+      </div>
+
+      <div class="overview-header">
+        <p class="welcome-msg" id="welcomeMsg"></p>
+        <h1 id="dash-title">Your <span>Wealth</span> Overview</h1>
+        <p class="lead">Cash, investments, and progress — one clear view.</p>
+      </div>
+
+      <div class="wealth-summary card">
+        <div class="wealth-primary">
+          <div class="wealth-primary-left">
+            <div class="label">Net Worth</div>
+            <div class="value" id="netWorth">$0.00</div>
+            <div class="change" id="netWorthChange">Available cash + market value of holdings</div>
+          </div>
+          <div class="wealth-primary-right">
+            <div class="cash-pill">
+              <span class="cash-label">Available Cash</span>
+              <span class="cash-value" id="mainBalance">$0.00</span>
+              <span class="cash-hint">Ready to invest or save</span>
+            </div>
+            <div class="actions-row wealth-actions">
+              <button class="btn btn-primary btn-sm" id="addMoneyBtn" type="button">+ Add Money</button>
+              <button class="btn btn-outline btn-sm" id="withdrawBtn" type="button">Withdraw</button>
+            </div>
+          </div>
+        </div>
+        <div class="wealth-flow" id="wealthFlow" aria-live="polite">
+          <div class="flow-item">
+            <span class="flow-label">Total Deposited</span>
+            <span class="flow-value" id="totalDeposited">$0.00</span>
+          </div>
+          <div class="flow-item">
+            <span class="flow-label">Total Invested</span>
+            <span class="flow-value" id="totalInvested">$0.00</span>
+          </div>
+          <div class="flow-item">
+            <span class="flow-label">Invested (Cost)</span>
+            <span class="flow-value" id="investedBalance">$0.00</span>
+          </div>
+          <div class="flow-item">
+            <span class="flow-label">Market Value</span>
+            <span class="flow-value" id="marketValue">$0.00</span>
+          </div>
+          <div class="flow-item flow-pnl" id="pnlFlow">
+            <span class="flow-label">Profit Earned</span>
+            <span class="flow-value" id="totalPnL">$0.00</span>
+            <span class="flow-sub" id="pnlBreakdown">Unrealized · Realized</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h3>Portfolio Value</h3>
+          <canvas id="portfolioChart" aria-label="Portfolio value chart"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Allocation</h3>
+          <canvas id="allocationChart" aria-label="Allocation chart"></canvas>
+        </div>
+      </div>
+
+      <div class="price-section">
+        <div class="card">
+          <div class="price-header">
+            <h3>Live Prices</h3>
+            <div class="loading-indicator hidden" id="priceLoading"><div class="spinner"></div> Updating…</div>
+          </div>
+          <div class="price-grid" id="priceGrid"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="toolbar">
+          <h3 style="margin:0;flex:1;font-size:0.7rem;font-weight:650;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Holdings</h3>
+          <input type="search" id="holdingsSearch" placeholder="Search holdings…" aria-label="Search holdings" />
+          <div class="filter-chips" id="classFilters">
+            <button class="chip active" type="button" data-class="all">All</button>
+            <button class="chip" type="button" data-class="Crypto">Crypto</button>
+            <button class="chip" type="button" data-class="Stock">Stocks</button>
+            <button class="chip" type="button" data-class="Mutual Fund">Funds</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Asset</th><th>Class</th><th>Units</th><th>Cost Basis</th><th>Market Value</th><th>P&amp;L</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="holdingsBody"></tbody>
+          </table>
+        </div>
+        <p class="note">Holdings use <strong>average cost basis</strong>. Totals above are derived from transaction history.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:0.7rem;font-weight:650;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Quick Actions</h3>
+        <div class="actions-row">
+          <button class="btn btn-ghost" id="exportCsvBtn" type="button">Export CSV</button>
+          <button class="btn btn-ghost" id="gotoGoalsBtn" type="button">View Goals</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="invest" class="section" aria-labelledby="invest-title">
+      <h2 id="invest-title" style="font-size:1.1rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:1.2rem;">Invest</h2>
+      <div class="card form-card">
+        <div class="form-group">
+          <label for="assetSelect">Asset</label>
+          <select id="assetSelect"></select>
+        </div>
+        <div class="form-group">
+          <label for="investAmount">Amount (USD)</label>
+          <input type="number" id="investAmount" placeholder="e.g. 50" min="1" step="0.01" />
+        </div>
+        <button class="btn btn-primary btn-block" id="investBtn" type="button">Invest Now</button>
+      </div>
+    </section>
+
+    <section id="goals" class="section" aria-labelledby="goals-title">
+      <h2 id="goals-title" style="font-size:1.1rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:0.5rem;">Savings Goals</h2>
+      <p style="color:var(--text-muted);margin-bottom:16px;font-size:0.9rem;">Create long-term goals and contribute from Available Cash.</p>
+      <div class="actions-row" style="margin-bottom:16px;">
+        <button class="btn btn-primary" id="newGoalBtn" type="button">+ New Goal</button>
+      </div>
+      <div class="goals-grid" id="goalsGrid"></div>
+    </section>
+
+    <section id="alerts" class="section" aria-labelledby="alerts-title">
+      <h2 id="alerts-title" style="font-size:1.1rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:1.2rem;">Price Alerts</h2>
+      <div class="card form-card" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label for="alertSymbol">Asset</label>
+          <select id="alertSymbol"></select>
+        </div>
+        <div class="form-group">
+          <label for="alertPrice">Target Price (USD)</label>
+          <input type="number" id="alertPrice" placeholder="e.g. 95000" min="0" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label for="alertDirection">Trigger</label>
+          <select id="alertDirection">
+            <option value="above">Price goes above target</option>
+            <option value="below">Price goes below target</option>
+          </select>
+        </div>
+        <button class="btn btn-primary btn-block" id="addAlertBtn" type="button">Create Alert</button>
+      </div>
+      <div class="card">
+        <h3 style="font-size:0.7rem;font-weight:650;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">Active Alerts</h3>
+        <div id="alertsList"></div>
+      </div>
+    </section>
+
+    <section id="history" class="section" aria-labelledby="history-title">
+      <h2 id="history-title" style="font-size:1.1rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;">Transaction History</h2>
+      <div class="toolbar" style="margin-bottom:12px;">
+        <input type="search" id="historySearch" placeholder="Search transactions…" aria-label="Search history" />
+        <button class="btn btn-ghost" id="clearHistoryBtn" type="button">Clear History</button>
+      </div>
+      <div class="card"><div class="tx-list" id="txList"></div></div>
+    </section>
+  </div>
+
+  <div class="modal-overlay open" id="loginOverlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+    <div class="modal">
+      <h2 id="loginTitle">Sign In</h2>
+      <div class="form-group">
+        <label for="loginId">Email or Username</label>
+        <input type="text" id="loginId" placeholder="Email or username" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" class="toggle-password" id="togglePassword" aria-label="Show password">Show</button>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" id="loginBtn" type="button">Sign In</button>
+      <div class="error" id="loginError" role="alert"></div>
+      <div class="modal-divider">or</div>
+      <button class="btn btn-outline btn-block" id="guestBtn" type="button">Continue as Guest</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="addMoneyModal" role="dialog" aria-modal="true" aria-labelledby="addMoneyTitle">
+    <div class="modal">
+      <h2 id="addMoneyTitle">Add Money</h2>
+      <div class="form-group">
+        <label for="addMoneyAmount">Amount (USD)</label>
+        <input type="number" id="addMoneyAmount" placeholder="e.g. 100" min="1" step="0.01" />
+      </div>
+      <div class="actions-row" style="margin-top:14px;">
+        <button class="btn btn-primary" id="confirmAddMoney" type="button" style="flex:1;">Confirm</button>
+        <button class="btn btn-outline" id="cancelAddMoney" type="button" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="sellModal" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
+    <div class="modal">
+      <h2 id="sellTitle">Sell Position</h2>
+      <div class="form-group">
+        <label for="sellPercent">Percentage</label>
+        <select id="sellPercent">
+          <option value="25">25%</option>
+          <option value="50">50%</option>
+          <option value="75">75%</option>
+          <option value="100" selected>100% (All)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Estimated proceeds</label>
+        <div id="sellEstimate" style="font-size:1.15rem;font-weight:700;color:var(--accent);">$0.00</div>
+      </div>
+      <div class="actions-row" style="margin-top:14px;">
+        <button class="btn btn-danger" id="confirmSellBtn" type="button" style="flex:1;">Confirm Sell</button>
+        <button class="btn btn-outline" id="cancelSellBtn" type="button" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="withdrawModal" role="dialog" aria-modal="true" aria-labelledby="withdrawTitle">
+    <div class="modal">
+      <h2 id="withdrawTitle">Withdrawal Restricted</h2>
+      <div class="block-message">
+        AN AVAILABLE BALANCE OF $10,000 USD IS REQUIRED TO REACH YOUR SAVINGS GOALS AND UNLOCK INVESTED FUNDS.
+      </div>
+      <button class="btn btn-primary btn-block" id="closeWithdrawModal" type="button">Understood</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="portfolioModal" role="dialog" aria-modal="true" aria-labelledby="portfolioModalTitle">
+    <div class="modal">
+      <h2 id="portfolioModalTitle">New Portfolio</h2>
+      <div class="form-group">
+        <label for="portfolioNameInput">Name</label>
+        <input type="text" id="portfolioNameInput" placeholder="e.g. Long-term" maxlength="40" />
+      </div>
+      <div class="actions-row" style="margin-top:14px;">
+        <button class="btn btn-primary" id="confirmPortfolio" type="button" style="flex:1;">Save</button>
+        <button class="btn btn-outline" id="cancelPortfolio" type="button" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="goalModal" role="dialog" aria-modal="true" aria-labelledby="goalModalTitle">
+    <div class="modal">
+      <h2 id="goalModalTitle">New Savings Goal</h2>
+      <div class="form-group">
+        <label for="goalName">Name</label>
+        <input type="text" id="goalName" placeholder="e.g. Home Down Payment" maxlength="50" />
+      </div>
+      <div class="form-group">
+        <label for="goalType">Type</label>
+        <select id="goalType">
+          <option value="home">Home</option>
+          <option value="education">Education</option>
+          <option value="retirement">Retirement</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="goalTarget">Target (USD)</label>
+        <input type="number" id="goalTarget" placeholder="e.g. 25000" min="100" step="100" />
+      </div>
+      <div class="form-group">
+        <label for="goalCurrent">Already Saved (USD)</label>
+        <input type="number" id="goalCurrent" placeholder="0" min="0" step="10" value="0" />
+      </div>
+      <div class="actions-row" style="margin-top:14px;">
+        <button class="btn btn-primary" id="confirmGoal" type="button" style="flex:1;">Create</button>
+        <button class="btn btn-outline" id="cancelGoal" type="button" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="contributeModal" role="dialog" aria-modal="true" aria-labelledby="contributeTitle">
+    <div class="modal">
+      <h2 id="contributeTitle">Contribute to Goal</h2>
+      <div class="form-group">
+        <label for="contributeAmount">Amount (USD)</label>
+        <input type="number" id="contributeAmount" placeholder="e.g. 50" min="1" step="1" />
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;">Funds move from Available Cash into this goal.</p>
+      <div class="actions-row">
+        <button class="btn btn-primary" id="confirmContribute" type="button" style="flex:1;">Contribute</button>
+        <button class="btn btn-outline" id="cancelContribute" type="button" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="clearHistoryModal" role="dialog" aria-modal="true" aria-labelledby="clearHistoryTitle">
+    <div class="modal">
+      <h2 id="clearHistoryTitle">Clear History?</h2>
+      <p style="text-align:center;color:var(--text-muted);margin-bottom:18px;font-size:0.9rem;">Permanently removes all transactions for this portfolio.</p>
+      <div class="actions-row">
+        <button class="btn btn-danger" id="confirmClearHistory" type="button" style="flex:1;">Clear</button>
+        <button class="btn btn-outline" id="cancelClearHistory" type="button" style="flex:1;">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" aria-live="polite"></div>
+  <div class="shortcuts-hint">Press <kbd>?</kbd> for shortcuts</div>
+
+  <footer id="mainFooter" class="logged-out">
+    <div class="footer-inner">
+      <div><span class="brand">⬡ City-Money Pro</span> v20 · Paper trading</div>
+      <div>
+        <a href="#" data-section="dashboard" class="nav-link">Dashboard</a>
+        <a href="#" data-section="goals" class="nav-link">Goals</a>
+        <a href="#" data-section="history" class="nav-link">History</a>
+      </div>
+      <div>© 2026 · MIT</div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
